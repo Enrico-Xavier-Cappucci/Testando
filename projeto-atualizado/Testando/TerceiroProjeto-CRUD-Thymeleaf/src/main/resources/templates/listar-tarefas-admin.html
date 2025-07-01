@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todas as Tarefas - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .navbar-brand {
+            font-weight: 600;
+            color: white !important;
+        }
+        .btn-outline-light:hover {
+            background-color: rgba(255,255,255,0.2);
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            margin-top: 30px;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 20px;
+        }
+        .task-row {
+            transition: all 0.3s ease;
+        }
+        .task-row:hover {
+            background-color: #f8f9fa;
+        }
+        .status-badge {
+            font-size: 0.8em;
+            padding: 5px 10px;
+            border-radius: 15px;
+        }
+        .badge-completed {
+            background-color: #28a745;
+            color: white;
+        }
+        .badge-pending {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .badge-overdue {
+            background-color: #dc3545;
+            color: white;
+        }
+        .employee-info {
+            font-size: 0.9em;
+            color: #666;
+        }
+        .task-description {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .no-tasks {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        .no-tasks i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: #ddd;
+        }
+        .stats-cards {
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            border: none;
+            border-radius: 10px;
+            text-align: center;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card.completed {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
+        .stat-card.pending {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: white;
+        }
+        .stat-card.overdue {
+            background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
+            color: white;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-tasks"></i> Sistema de Gerenciamento
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="btn btn-outline-light me-2" href="/">
+                    <i class="fas fa-arrow-left"></i> Voltar ao Dashboard
+                </a>
+                <a class="btn btn-outline-light me-2" th:href="@{/showAdicionarTarefaForm}">
+                    <i class="fas fa-plus"></i> Nova Tarefa
+                </a>
+                <form th:action="@{/logout}" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-outline-light">
+                        <i class="fas fa-sign-out-alt"></i> Sair
+                    </button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Estatísticas -->
+        <div class="row stats-cards">
+            <div class="col-md-4">
+                <div class="card stat-card completed">
+                    <div class="card-body">
+                        <div class="stat-number" th:text="${#lists.size(#lists.select(tarefas, 'concluida'))}">0</div>
+                        <div>Tarefas Concluídas</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card stat-card pending">
+                    <div class="card-body">
+                        <div class="stat-number" th:text="${#lists.size(#lists.select(tarefas, '!concluida and dataLimite.isAfter(T(java.time.LocalDate).now())'))}">0</div>
+                        <div>Tarefas Pendentes</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card stat-card overdue">
+                    <div class="card-body">
+                        <div class="stat-number" th:text="${#lists.size(#lists.select(tarefas, '!concluida and dataLimite.isBefore(T(java.time.LocalDate).now())'))}">0</div>
+                        <div>Tarefas Atrasadas</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Tarefas -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="mb-0">
+                    <i class="fas fa-clipboard-list"></i> Todas as Tarefas
+                    <span class="badge bg-light text-dark ms-2" th:text="${#lists.size(tarefas)}"></span>
+                </h2>
+            </div>
+            <div class="card-body">
+                <!-- Verificar se há tarefas -->
+                <div th:if="${#lists.isEmpty(tarefas)}" class="no-tasks">
+                    <i class="fas fa-clipboard-check"></i>
+                    <h4>Nenhuma tarefa cadastrada</h4>
+                    <p>Não há tarefas no sistema. Comece criando uma nova tarefa.</p>
+                    <a th:href="@{/showAdicionarTarefaForm}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Criar Primeira Tarefa
+                    </a>
+                </div>
+
+                <!-- Tabela de tarefas -->
+                <div th:if="${!#lists.isEmpty(tarefas)}" class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Título</th>
+                                <th>Descrição</th>
+                                <th>Empregado</th>
+                                <th>Data Limite</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="tarefa : ${tarefas}" class="task-row">
+                                <td>
+                                    <strong th:text="${tarefa.titulo}"></strong>
+                                </td>
+                                <td>
+                                    <div class="task-description" th:text="${tarefa.descricao}" th:title="${tarefa.descricao}"></div>
+                                </td>
+                                <td>
+                                    <div th:text="${tarefa.empregado.primeiroNome + ' ' + tarefa.empregado.sobrenome}"></div>
+                                    <div class="employee-info" th:text="${tarefa.empregado.email}"></div>
+                                </td>
+                                <td>
+                                    <div th:text="${#temporals.format(tarefa.dataLimite, 'dd/MM/yyyy')}"></div>
+                                    <small class="text-muted" 
+                                           th:text="${tarefa.dataLimite.isBefore(T(java.time.LocalDate).now())} ? 'Atrasada' : 
+                                                    (${tarefa.dataLimite.isEqual(T(java.time.LocalDate).now())} ? 'Vence hoje' : 
+                                                    ('Faltam ' + ${T(java.time.temporal.ChronoUnit).DAYS.between(T(java.time.LocalDate).now(), tarefa.dataLimite)} + ' dias'))">
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="status-badge"
+                                          th:classappend="${tarefa.concluida} ? 'badge-completed' : (${tarefa.dataLimite.isBefore(T(java.time.LocalDate).now())} ? 'badge-overdue' : 'badge-pending')"
+                                          th:text="${tarefa.concluida} ? 'Concluída' : (${tarefa.dataLimite.isBefore(T(java.time.LocalDate).now())} ? 'Atrasada' : 'Pendente')">
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+</body>
+</html>
+
